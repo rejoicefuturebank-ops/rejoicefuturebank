@@ -16,7 +16,7 @@ const supabase = createClient(
 // Initialize Express
 const app = express();
 
-// 1. CORS MUST BE FIRST to handle preflight OPTIONS requests properly
+// 1. CORS MUST BE FIRST to handle preflight OPTIONS requests
 const allowedOrigins = [
     'http://localhost:5500',
     'http://localhost:5501',
@@ -26,15 +26,13 @@ const allowedOrigins = [
     'http://127.0.0.1:5502',
     'https://your-frontend-domain.com',
     'https://your-frontend.vercel.app',
-    'https://your-frontend.netlify.app',
-    'null' // Required for local file:// testing sometimes
+    'https://your-frontend.netlify.app'
 ];
 
 app.use(cors({
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, or Postman)
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, Postman, or curl)
         if (!origin) return callback(null, true);
-        
         if (allowedOrigins.indexOf(origin) === -1) {
             const msg = 'The CORS policy does not allow access from this origin.';
             return callback(new Error(msg), false);
@@ -83,7 +81,7 @@ const loanRoutes = require('./routes/loans');
 const supportRoutes = require('./routes/support');
 const notificationRoutes = require('./routes/notifications');
 
-// Import Admin Routes (FIXED PATHS)
+// Import Admin Routes (FIXED PATHS - ensure these match your actual folders)
 const adminUserRoutes = require('./routes/admin/users');
 const adminBalanceRoutes = require('./routes/admin/balances');
 const adminLimitRoutes = require('./routes/admin/limits');
@@ -138,5 +136,13 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-// Vercel Serverless Export
+// Vercel Serverless Export & Local Dev Server
+// We wrap app.listen so it ONLY runs locally, not on Vercel
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`🏦 Banking API Server running on port ${PORT}`);
+    });
+}
+
 module.exports = app;
