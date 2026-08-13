@@ -5,7 +5,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-
 const { createClient } = require('@supabase/supabase-js');
 
 // Initialize Supabase
@@ -17,30 +16,23 @@ const supabase = createClient(
 // Initialize Express
 const app = express();
 
-
-/*app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5500',
-    credentials: true
-}));*/
-
-// Update the CORS configuration to accept your frontend domain
+// 1. CORS MUST BE FIRST to handle preflight OPTIONS requests properly
 const allowedOrigins = [
     'http://localhost:5500',
+    'http://localhost:5501',
     'http://localhost:3000',
-    'http://127.0.0.1:5501',
-    'https://127.0.0.1:5501',
     'http://127.0.0.1:5500',
-    'https://127.0.0.1:5500',
+    'http://127.0.0.1:5501',
     'http://127.0.0.1:5502',
-    'https://127.0.0.1:5502',
     'https://your-frontend-domain.com',
     'https://your-frontend.vercel.app',
-    'https://your-frontend.netlify.app'
+    'https://your-frontend.netlify.app',
+    'null' // Required for local file:// testing sometimes
 ];
 
 app.use(cors({
     origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl)
+        // Allow requests with no origin (like mobile apps, curl, or Postman)
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) === -1) {
@@ -54,22 +46,8 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Rate Limiting
-const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    message: { error: 'Too many requests, please try again later.' }
-});
-
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20,
-    message: { error: 'Too many authentication attempts, please try again later.' }
-});
-
-// Security Middleware
+// 2. Security & Parsing Middleware
 app.use(helmet());
-app.use(generalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -81,7 +59,20 @@ app.use((req, res, next) => {
     next();
 });
 
-// Import routes
+// Rate Limiting
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: { error: 'Too many requests, please try again later.' }
+});
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { error: 'Too many authentication attempts, please try again later.' }
+});
+app.use(generalLimiter);
+
+// Import Customer Routes
 const authRoutes = require('./routes/auth');
 const accountRoutes = require('./routes/accounts');
 const transferRoutes = require('./routes/transfers');
@@ -92,17 +83,17 @@ const loanRoutes = require('./routes/loans');
 const supportRoutes = require('./routes/support');
 const notificationRoutes = require('./routes/notifications');
 
-// Admin routes
+// Import Admin Routes (FIXED PATHS)
 const adminUserRoutes = require('./routes/admin/users');
 const adminBalanceRoutes = require('./routes/admin/balances');
 const adminLimitRoutes = require('./routes/admin/limits');
 const adminAuditRoutes = require('./routes/admin/audit');
 const adminImpersonationRoutes = require('./routes/admin/impersonation');
-const adminSupportRoutes = require('./routes/support');
+const adminSupportRoutes = require('./routes/admin/support');       // FIXED
 const adminSettingsRoutes = require('./routes/admin/settings');
 const adminSecurityRoutes = require('./routes/admin/security');
-const adminSimulationRoutes = require('./routes/simulation');
-const adminReportRoutes = require('./routes/reports');
+const adminSimulationRoutes = require('./routes/admin/simulation'); // FIXED
+const adminReportRoutes = require('./routes/admin/reports');        // FIXED
 
 // API Routes
 app.use('/api/auth', authLimiter, authRoutes);
@@ -147,12 +138,5 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🏦 Banking API Server running on port ${PORT}`);
-    console.log(`📊 Mode: DEMO/SIMULATION - No real money involved`);
-});
-
-//module.exports = { app, supabase };
-
+// Vercel Serverless Export
 module.exports = app;
