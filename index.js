@@ -17,8 +17,7 @@ const supabase = createClient(
 // Initialize Express
 const app = express();
 
-// Security Middleware
-app.use(helmet());
+
 /*app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5500',
     credentials: true
@@ -68,6 +67,8 @@ const authLimiter = rateLimit({
     message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
+// Security Middleware
+app.use(helmet());
 app.use(generalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
