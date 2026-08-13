@@ -8,7 +8,97 @@ const NotificationService = require('../services/notifications');
 
 router.use(authenticate);
 
-// Get user accounts
+// ============================================
+// EXCHANGE RATES (MUST BE BEFORE /:id)
+// ============================================
+router.get('/exchange-rates', async (req, res) => {
+    try {
+        const exchange = new ExchangeService(req.supabase);
+        const rates = await exchange.getAllRates('USD');
+        res.json({ base: 'USD', rates });
+    } catch (error) {
+        console.error('Exchange rates error:', error);
+        res.status(500).json({ error: 'Failed to fetch exchange rates' });
+    }
+});
+
+// ============================================
+// CURRENCY CONVERSION (MUST BE BEFORE /:id)
+// ============================================
+router.post('/convert', async (req, res) => {
+    try {
+        const { from_account_id, to_account_id, amount } = req.body;
+
+        if (!from_account_id || !to_account_id || !amount) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const { data: fromAccount } = await req.supabase
+            .from('accounts')
+            .select('*, account_balances(*)')
+            .eq('id', from_account_id)
+            .eq('user_id', req.user.id)
+            .single();
+
+        const { data: toAccount } = await req.supabase
+            .from('accounts')
+            .select('*, account_balances(*)')
+            .eq('id', to_account_id)
+            .eq('user_id', req.user.id)
+            .single();
+
+        if (!fromAccount || !toAccount) {
+            return res.status(404).json({ error: 'Account not found' });
+        }
+
+        if (fromAccount.currency === toAccount.currency) {
+            return res.status(400).json({ error: 'Cannot convert to the same currency' });
+        }
+
+        const availableBalance = parseFloat(fromAccount.account_balances?.available_balance || 0);
+        if (availableBalance < amount) {
+            return res.status(400).json({ error: 'Insufficient balance' });
+        }
+
+        const exchange = new ExchangeService(req.supabase);
+        const conversion = await exchange.convert(amount, fromAccount.currency, toAccount.currency);
+
+        const ledger = new LedgerService(req.supabase);
+        const transaction = await ledger.createTransaction({
+            type: 'currency_conversion',
+            debitAccountId: fromAccount.id,
+            creditAccountId: toAccount.id,
+            amount: conversion.convertedAmount,
+            currency: toAccount.currency,
+            fee: conversion.fee,
+            description: `Converted ${amount} ${fromAccount.currency} to ${toAccount.currency}`,
+            initiatedBy: req.user.id,
+            exchangeRate: conversion.rate,
+            originalAmount: amount,
+            originalCurrency: fromAccount.currency,
+            metadata: { conversion }
+        });
+
+        await ledger.completeTransaction(transaction.id);
+
+        const notificationService = new NotificationService(req.supabase);
+        await notificationService.create(
+            req.user.id,
+            'conversion',
+            'Currency Conversion Complete',
+            `Converted ${amount} ${fromAccount.currency} to ${conversion.convertedAmount.toFixed(2)} ${toAccount.currency}`
+        );
+
+        res.json({ transaction, conversion });
+    } catch (error) {
+        console.error('Conversion error:', error);
+        res.status(500).json({ error: 'Conversion failed' });
+    }
+});
+
+// ============================================
+// GET USER ACCOUNTS
+// ============================================
 router.get('/', async (req, res) => {
     try {
         const { data: accounts, error } = await req.supabase
@@ -19,22 +109,26 @@ router.get('/', async (req, res) => {
 
         if (error) throw error;
 
-        // Get total balances
+        // Calculate total balance in USD
         let totalBalanceUSD = 0;
         const exchange = new ExchangeService(req.supabase);
 
-        for (const account of accounts) {
-            const balance = account.account_balances?.available_balance || 0;
+        for (const account of (accounts || [])) {
+            const balance = parseFloat(account.account_balances?.available_balance || 0);
             if (account.currency !== 'USD') {
-                const rate = await exchange.getRate(account.currency, 'USD');
-                totalBalanceUSD += balance * rate;
+                try {
+                    const rate = await exchange.getRate(account.currency, 'USD');
+                    totalBalanceUSD += balance * rate;
+                } catch (e) {
+                    totalBalanceUSD += balance; // Fallback
+                }
             } else {
-                totalBalanceUSD += parseFloat(balance);
+                totalBalanceUSD += balance;
             }
         }
 
         res.json({
-            accounts,
+            accounts: accounts || [],
             totalBalanceUSD: parseFloat(totalBalanceUSD.toFixed(2))
         });
     } catch (error) {
@@ -43,7 +137,9 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get account details
+// ============================================
+// GET SINGLE ACCOUNT
+// ============================================
 router.get('/:id', async (req, res) => {
     try {
         const { data: account, error } = await req.supabase
@@ -63,10 +159,16 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new currency account
+// ============================================
+// CREATE NEW CURRENCY ACCOUNT
+// ============================================
 router.post('/', async (req, res) => {
     try {
         const { currency, account_type } = req.body;
+
+        if (!currency) {
+            return res.status(400).json({ error: 'Currency is required' });
+        }
 
         // Check if currency is supported
         const { data: curr } = await req.supabase
@@ -108,6 +210,7 @@ router.post('/', async (req, res) => {
 
         if (error) throw error;
 
+        // Create balance record with 0.00 balance
         await req.supabase
             .from('account_balances')
             .insert({
@@ -124,7 +227,9 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Get account transactions
+// ============================================
+// GET ACCOUNT TRANSACTIONS
+// ============================================
 router.get('/:id/transactions', async (req, res) => {
     try {
         const { limit = 50, offset = 0 } = req.query;
@@ -141,7 +246,9 @@ router.get('/:id/transactions', async (req, res) => {
     }
 });
 
-// Deposit (simulated)
+// ============================================
+// DEPOSIT (SIMULATED)
+// ============================================
 router.post('/:id/deposit', async (req, res) => {
     try {
         const { amount, currency, description } = req.body;
@@ -174,7 +281,6 @@ router.post('/:id/deposit', async (req, res) => {
 
         await ledger.completeTransaction(transaction.id);
 
-        // Send notification
         const notificationService = new NotificationService(req.supabase);
         await notificationService.create(
             req.user.id,
@@ -187,82 +293,6 @@ router.post('/:id/deposit', async (req, res) => {
     } catch (error) {
         console.error('Deposit error:', error);
         res.status(500).json({ error: 'Deposit failed' });
-    }
-});
-
-// Currency conversion
-router.post('/convert', async (req, res) => {
-    try {
-        const { from_account_id, to_account_id, amount } = req.body;
-
-        const { data: fromAccount } = await req.supabase
-            .from('accounts')
-            .select('*, account_balances(*)')
-            .eq('id', from_account_id)
-            .eq('user_id', req.user.id)
-            .single();
-
-        const { data: toAccount } = await req.supabase
-            .from('accounts')
-            .select('*, account_balances(*)')
-            .eq('id', to_account_id)
-            .eq('user_id', req.user.id)
-            .single();
-
-        if (!fromAccount || !toAccount) {
-            return res.status(404).json({ error: 'Account not found' });
-        }
-
-        const availableBalance = parseFloat(fromAccount.account_balances?.available_balance || 0);
-        if (availableBalance < amount) {
-            return res.status(400).json({ error: 'Insufficient balance' });
-        }
-
-        const exchange = new ExchangeService(req.supabase);
-        const conversion = await exchange.convert(amount, fromAccount.currency, toAccount.currency);
-
-        const ledger = new LedgerService(req.supabase);
-        const transaction = await ledger.createTransaction({
-            type: 'currency_conversion',
-            debitAccountId: fromAccount.id,
-            creditAccountId: toAccount.id,
-            amount: conversion.convertedAmount,
-            currency: toAccount.currency,
-            fee: conversion.fee,
-            description: `Converted ${amount} ${fromAccount.currency} to ${toAccount.currency}`,
-            initiatedBy: req.user.id,
-            exchangeRate: conversion.rate,
-            originalAmount: amount,
-            originalCurrency: fromAccount.currency,
-            metadata: { conversion }
-        });
-
-        await ledger.completeTransaction(transaction.id);
-
-        // Notification
-        const notificationService = new NotificationService(req.supabase);
-        await notificationService.create(
-            req.user.id,
-            'conversion',
-            'Currency Conversion Complete',
-            `Converted ${amount} ${fromAccount.currency} to ${conversion.convertedAmount.toFixed(2)} ${toAccount.currency}`
-        );
-
-        res.json({ transaction, conversion });
-    } catch (error) {
-        console.error('Conversion error:', error);
-        res.status(500).json({ error: 'Conversion failed' });
-    }
-});
-
-// Get exchange rates
-router.get('/exchange-rates', async (req, res) => {
-    try {
-        const exchange = new ExchangeService(req.supabase);
-        const rates = await exchange.getAllRates('USD');
-        res.json({ base: 'USD', rates });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch rates' });
     }
 });
 
