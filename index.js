@@ -94,7 +94,7 @@ const adminSimulationRoutes = require('./routes/admin/simulation'); // FIXED
 const adminReportRoutes = require('./routes/admin/reports');        // FIXED
 
 // API Routes
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('./api/auth', authLimiter, authRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/cards', cardRoutes);
