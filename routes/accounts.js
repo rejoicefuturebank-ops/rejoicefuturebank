@@ -8,6 +8,8 @@ const NotificationService = require('../services/notifications');
 
 router.use(authenticate);
 
+const checkFrozen = require('../middleware/checkFrozen');
+
 // ============================================
 // EXCHANGE RATES (MUST BE BEFORE /:id)
 // ============================================
@@ -25,7 +27,7 @@ router.get('/exchange-rates', async (req, res) => {
 // ============================================
 // CURRENCY CONVERSION (MUST BE BEFORE /:id)
 // ============================================
-router.post('/convert', async (req, res) => {
+router.post('/convert', checkFrozen, async (req, res) => {
     try {
         const { from_account_id, to_account_id, amount } = req.body;
 
@@ -249,7 +251,7 @@ router.get('/:id/transactions', async (req, res) => {
 // ============================================
 // DEPOSIT (SIMULATED)
 // ============================================
-router.post('/:id/deposit', async (req, res) => {
+router.post('/:id/deposit', checkFrozen, async (req, res) => {
     try {
         const { amount, currency, description } = req.body;
 

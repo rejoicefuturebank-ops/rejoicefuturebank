@@ -1,24 +1,12 @@
-// Update the CORS configuration to accept your frontend domain
-const allowedOrigins = [
-    'http://localhost:5500',
-    'http://localhost:3000',
-    'https://your-frontend-domain.com',
-    'https://your-frontend.vercel.app',
-    'https://your-frontend.netlify.app'
-];
+// In accounts.js, add at the top after requires:
+const checkFrozen = require('../middleware/checkFrozen');
 
-app.use(cors({
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl)
-        if (!origin) return callback(null, true);
-        
-        if (allowedOrigins.indexOf(origin) === -1) {
-            const msg = 'The CORS policy does not allow access from this origin.';
-            return callback(new Error(msg), false);
-        }
-        return callback(null, true);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Apply to deposit endpoint
+router.post('/:id/deposit', checkFrozen, async (req, res) => {
+    // ... existing deposit code ...
+});
+
+// Apply to convert endpoint
+router.post('/convert', checkFrozen, async (req, res) => {
+    // ... existing convert code ...
+});

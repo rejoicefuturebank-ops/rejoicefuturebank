@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const NotificationService = require('../services/notifications');
 
 router.use(authenticate);
+const checkFrozen = require('../middleware/checkFrozen');
 
 // Get savings accounts
 router.get('/', async (req, res) => {
@@ -63,7 +64,7 @@ router.post('/', async (req, res) => {
 });
 
 // Deposit to savings
-router.post('/:id/deposit', async (req, res) => {
+router.post('/:id/deposit', checkFrozen, async (req, res) => {
     try {
         const { amount } = req.body;
 

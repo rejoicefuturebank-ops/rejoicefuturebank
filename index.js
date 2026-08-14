@@ -82,6 +82,9 @@ const investmentRoutes = require('./routes/investments');
 const loanRoutes = require('./routes/loans');
 const supportRoutes = require('./routes/support');
 const notificationRoutes = require('./routes/notifications');
+const checkFrozen = require('./middleware/checkFrozen');
+
+
 
 // Import Admin Routes (FIXED PATHS)
 const adminUserRoutes = require('./routes/admin/users');
@@ -98,11 +101,11 @@ const adminReportRoutes = require('./routes/admin/reports');        // FIXED
 // API Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/accounts', accountRoutes);
-app.use('/api/transfers', transferRoutes);
-app.use('/api/cards', cardRoutes);
-app.use('/api/savings', savingsRoutes);
-app.use('/api/investments', investmentRoutes);
-app.use('/api/loans', loanRoutes);
+app.use('/api/transfers', checkFrozen, transferRoutes);
+app.use('/api/cards', checkFrozen, cardRoutes);
+app.use('/api/savings', checkFrozen, savingsRoutes);
+app.use('/api/investments', checkFrozen, investmentRoutes);
+app.use('/api/loans', checkFrozen, loanRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/notifications', notificationRoutes);
 
