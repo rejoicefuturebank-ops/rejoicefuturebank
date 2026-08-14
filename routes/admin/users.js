@@ -110,21 +110,33 @@ router.post('/:id/freeze', rbac(['users.freeze']), async (req, res) => {
     try {
         const { reason } = req.body;
 
+        if (!reason) {
+            return res.status(400).json({ error: 'Freeze reason is required' });
+        }
+
+        // Get previous state for audit
         const { data: previous } = await req.supabase
             .from('users')
-            .select('is_frozen, freeze_transfers, freeze_withdrawals')
+            .select('is_frozen, freeze_reason, frozen_at')
             .eq('id', req.params.id)
             .single();
 
+        // Update user with freeze details
         const { data: user, error } = await req.supabase
             .from('users')
-            .update({ is_frozen: true })
+            .update({ 
+                is_frozen: true,
+                freeze_reason: reason,
+                frozen_at: new Date().toISOString(),
+                frozen_by: req.admin.id
+            })
             .eq('id', req.params.id)
             .select()
             .single();
 
         if (error) throw error;
 
+        // Audit log
         await auditLog(req.supabase, {
             actorId: req.admin.id,
             actorType: 'admin',
@@ -132,26 +144,47 @@ router.post('/:id/freeze', rbac(['users.freeze']), async (req, res) => {
             targetType: 'user',
             targetId: req.params.id,
             previousValue: previous,
-            newValue: { is_frozen: true },
-            reason,
+            newValue: { is_frozen: true, reason },
+            reason: reason,
             ip: req.ip,
             userAgent: req.get('user-agent')
         });
 
-        res.json({ user, message: 'Account frozen' });
+        // Notify user about freeze
+        await req.supabase
+            .from('notifications')
+            .insert({
+                id: uuidv4(),
+                user_id: req.params.id,
+                type: 'account_frozen',
+                title: 'Account Frozen',
+                message: `Your account has been frozen. Reason: ${reason}. Please contact support for assistance.`
+            });
+
+        res.json({ 
+            user, 
+            message: 'Account frozen successfully',
+            reason: reason
+        });
     } catch (error) {
+        console.error('Freeze error:', error);
         res.status(500).json({ error: 'Failed to freeze account' });
     }
 });
 
-// Unfreeze account
+// Unfreeze account - clear the reason
 router.post('/:id/unfreeze', rbac(['users.freeze']), async (req, res) => {
     try {
         const { reason } = req.body;
 
         const { data: user } = await req.supabase
             .from('users')
-            .update({ is_frozen: false })
+            .update({ 
+                is_frozen: false,
+                freeze_reason: null, // Clear reason
+                frozen_at: null,
+                frozen_by: null
+            })
             .eq('id', req.params.id)
             .select()
             .single();
@@ -162,9 +195,20 @@ router.post('/:id/unfreeze', rbac(['users.freeze']), async (req, res) => {
             action: 'ADMIN_UNFROZE_ACCOUNT',
             targetType: 'user',
             targetId: req.params.id,
-            reason,
+            reason: reason || 'Account unfrozen',
             ip: req.ip
         });
+
+        // Notify user
+        await req.supabase
+            .from('notifications')
+            .insert({
+                id: uuidv4(),
+                user_id: req.params.id,
+                type: 'account_unfrozen',
+                title: 'Account Unfrozen',
+                message: 'Your account has been unfrozen. All services are now available.'
+            });
 
         res.json({ user, message: 'Account unfrozen' });
     } catch (error) {
