@@ -24,7 +24,7 @@ const allowedOrigins = [
     'http://127.0.0.1:5500',
     'http://127.0.0.1:5501',
     'http://127.0.0.1:5502',
-    'https://your-frontend-domain.com',
+    'https://rejoicefuturebanking.verecel.app',
     'https://your-frontend.vercel.app',
     'https://your-frontend.netlify.app',
     'null' // Required for local file:// testing sometimes
