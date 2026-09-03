@@ -75,15 +75,16 @@ router.post('/tickets/:id/reply', async (req, res) => {
             .update({ status: 'waiting_for_customer', updated_at: new Date().toISOString() })
             .eq('id', req.params.id);
 
-        // Notify user if not internal
+        // Notify user if not internal (guest tickets have no user_id to notify —
+        // TODO: wire up an email service to notify ticket.guest_email in that case)
         if (!is_internal) {
             const { data: ticket } = await req.supabase
                 .from('support_tickets')
-                .select('user_id')
+                .select('user_id, is_guest, guest_email')
                 .eq('id', req.params.id)
                 .single();
 
-            if (ticket) {
+            if (ticket && ticket.user_id) {
                 await req.supabase
                     .from('notifications')
                     .insert({

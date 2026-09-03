@@ -81,6 +81,7 @@ const savingsRoutes = require('./routes/savings');
 const investmentRoutes = require('./routes/investments');
 const loanRoutes = require('./routes/loans');
 const supportRoutes = require('./routes/support');
+const publicSupportRoutes = require('./routes/public-support');
 const notificationRoutes = require('./routes/notifications');
 const checkFrozen = require('./middleware/checkFrozen');
 
@@ -107,6 +108,7 @@ app.use('/api/savings', checkFrozen, savingsRoutes);
 app.use('/api/investments', checkFrozen, investmentRoutes);
 app.use('/api/loans', checkFrozen, loanRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/public', publicSupportRoutes); // no auth — landing page contact widget
 app.use('/api/notifications', notificationRoutes);
 
 // Admin Routes
