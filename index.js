@@ -73,7 +73,7 @@ const authLimiter = rateLimit({
 app.use(generalLimiter);
 
 // Import Customer Routes
-const authRoutes = require('./routes/auth');
+const authRoutes = require('./routes/routes-auth');
 const accountRoutes = require('./routes/accounts');
 const transferRoutes = require('./routes/transfers');
 const cardRoutes = require('./routes/cards');
@@ -93,7 +93,7 @@ const adminBalanceRoutes = require('./routes/admin/balances');
 const adminLimitRoutes = require('./routes/admin/limits');
 const adminAuditRoutes = require('./routes/admin/audit');
 const adminImpersonationRoutes = require('./routes/admin/impersonation');
-const adminSupportRoutes = require('./routes/admin/support');       // FIXED
+const adminSupportRoutes = require('./routes/admin/admin-support');       // FIXED
 const adminSettingsRoutes = require('./routes/admin/settings');
 const adminSecurityRoutes = require('./routes/admin/security');
 const adminSimulationRoutes = require('./routes/admin/simulation'); // FIXED
