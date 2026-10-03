@@ -14,9 +14,9 @@ const {
     registerLocationSchema,
     verifyEmailSchema
 } = require('../utils/validators');
-const { authenticate } = require('../../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const EmailVerificationService = require('../../services/emailverification');
-const { sendEmail } = require('../../services/email');
+const { sendEmail } = require('../services/email');
 
 const signToken = (user) => jwt.sign(
     {
