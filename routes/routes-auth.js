@@ -7,7 +7,7 @@ const {
     hashPassword,
     comparePassword,
     generateSessionToken
-} = require('../../utils/crypto');
+} = require('../utils/crypto');
 const {
     loginSchema,
     registerStep2Schema,
