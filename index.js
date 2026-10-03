@@ -15,6 +15,7 @@ const supabase = createClient(
 
 // Initialize Express
 const app = express();
+app.set('trust proxy', 1); // trust Vercel's proxy layer so req.ip and X-Forwarded-For work correctly
 
 // 1. CORS MUST BE FIRST to handle preflight OPTIONS requests properly
 const allowedOrigins = [
