@@ -61,7 +61,7 @@ app.use((req, res, next) => {
 // consumed and signature verification would always fail. The webhook
 // router applies its own per-route body parser (see routes/webhooks.js).
 // ============================================================
-const webhookRoutes = require('./routes/webhooks');
+const webhookRoutes = require('../routes/webhooks');
 app.use('/api/webhooks', webhookRoutes);
 
 // 2. Security & Parsing Middleware
@@ -85,32 +85,32 @@ const authLimiter = rateLimit({
 app.use(generalLimiter);
 
 // Import Customer Routes
-const authRoutes = require('./routes/auth');
-const accountRoutes = require('./routes/accounts');
-const transferRoutes = require('./routes/transfers');
-const cardRoutes = require('./routes/cards');
-const savingsRoutes = require('./routes/savings');
-const investmentRoutes = require('./routes/investments');
-const loanRoutes = require('./routes/loans');
-const supportRoutes = require('./routes/support');
-const publicSupportRoutes = require('./routes/public-support');
-const notificationRoutes = require('./routes/notifications');
-const fundingRoutes = require('./routes/funding');
+const authRoutes = require('../routes/auth');
+const accountRoutes = require('../routes/accounts');
+const transferRoutes = require('../routes/transfers');
+const cardRoutes = require('../routes/cards');
+const savingsRoutes = require('../routes/savings');
+const investmentRoutes = require('../routes/investments');
+const loanRoutes = require('../routes/loans');
+const supportRoutes = require('../routes/support');
+const publicSupportRoutes = require('../routes/public-support');
+const notificationRoutes = require('../routes/notifications');
+const fundingRoutes = require('../routes/funding');
 const checkFrozen = require('./middleware/checkFrozen');
 
 
 
 // Import Admin Routes (FIXED PATHS)
-const adminUserRoutes = require('./routes/admin/users');
-const adminBalanceRoutes = require('./routes/admin/balances');
-const adminLimitRoutes = require('./routes/admin/limits');
-const adminAuditRoutes = require('./routes/admin/audit');
-const adminImpersonationRoutes = require('./routes/admin/impersonation');
-const adminSupportRoutes = require('./routes/admin/support');       // FIXED
-const adminSettingsRoutes = require('./routes/admin/settings');
-const adminSecurityRoutes = require('./routes/admin/security');
-const adminSimulationRoutes = require('./routes/admin/simulation'); // FIXED
-const adminReportRoutes = require('./routes/admin/reports');        // FIXED
+const adminUserRoutes = require('../routes/admin/users');
+const adminBalanceRoutes = require('../routes/admin/balances');
+const adminLimitRoutes = require('../routes/admin/limits');
+const adminAuditRoutes = require('../routes/admin/audit');
+const adminImpersonationRoutes = require('../routes/admin/impersonation');
+const adminSupportRoutes = require('../routes/admin/support');       // FIXED
+const adminSettingsRoutes = require('../routes/admin/settings');
+const adminSecurityRoutes = require('../routes/admin/security');
+const adminSimulationRoutes = require('../routes/admin/simulation'); // FIXED
+const adminReportRoutes = require('../routes/admin/reports');        // FIXED
 
 // API Routes
 app.use('/api/auth', authLimiter, authRoutes);

@@ -1,6 +1,6 @@
 // Public Support Routes — NO authentication (used by the landing page widget)
 // Mount this at /api/public in index.js, e.g.:
-//   const publicSupportRoutes = require('./routes/public-support');
+//   const publicSupportRoutes = require('../routes/public-support');
 //   app.use('/api/public', publicSupportRoutes);
 const express = require('express');
 const router = express.Router();

@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const LedgerService = require('../services/ledger');
 const NotificationService = require('../services/notifications');
-const stripeService = require('../services/stripeService');
-const flutterwaveService = require('../services/flutterwaveService');
+const stripeService = require('../services/stripeservice');
+const flutterwaveService = require('../services/flutterwaveservice');
 
 // NOTE ON MOUNTING: this router must be mounted in index.js BEFORE the
 // global express.json() middleware. Stripe's webhook signature check
