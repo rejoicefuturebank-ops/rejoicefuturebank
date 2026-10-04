@@ -27,7 +27,7 @@ const allowedOrigins = [
     'http://127.0.0.1:5502',
     'https://rejoicefuturebanking.vercel.app',
     'rejoicefuturebanking.vercel.app',
-    //'https://your-frontend.netlify.app',
+    'https://your-frontend.netlify.app',
     'null' // Required for local file:// testing sometimes
 ];
 
@@ -47,18 +47,29 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Make supabase available to routes. Must run before the webhook
+// router below, since webhook handlers need req.supabase too.
+app.use((req, res, next) => {
+    req.supabase = supabase;
+    next();
+});
+
+// ============================================================
+// WEBHOOKS — mounted BEFORE express.json(). Stripe's webhook needs
+// the raw, unparsed request body to verify its signature; if the
+// global JSON parser ran first, that raw body would already be
+// consumed and signature verification would always fail. The webhook
+// router applies its own per-route body parser (see routes/webhooks.js).
+// ============================================================
+const webhookRoutes = require('./routes/webhooks');
+app.use('/api/webhooks', webhookRoutes);
+
 // 2. Security & Parsing Middleware
 app.use(helmet());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan('combined'));
-
-// Make supabase available to routes
-app.use((req, res, next) => {
-    req.supabase = supabase;
-    next();
-});
 
 // Rate Limiting
 const generalLimiter = rateLimit({
@@ -74,7 +85,7 @@ const authLimiter = rateLimit({
 app.use(generalLimiter);
 
 // Import Customer Routes
-const authRoutes = require('./routes/routes-auth');
+const authRoutes = require('./routes/auth');
 const accountRoutes = require('./routes/accounts');
 const transferRoutes = require('./routes/transfers');
 const cardRoutes = require('./routes/cards');
@@ -84,6 +95,7 @@ const loanRoutes = require('./routes/loans');
 const supportRoutes = require('./routes/support');
 const publicSupportRoutes = require('./routes/public-support');
 const notificationRoutes = require('./routes/notifications');
+const fundingRoutes = require('./routes/funding');
 const checkFrozen = require('./middleware/checkFrozen');
 
 
@@ -94,7 +106,7 @@ const adminBalanceRoutes = require('./routes/admin/balances');
 const adminLimitRoutes = require('./routes/admin/limits');
 const adminAuditRoutes = require('./routes/admin/audit');
 const adminImpersonationRoutes = require('./routes/admin/impersonation');
-const adminSupportRoutes = require('./routes/admin/admin-support');       // FIXED
+const adminSupportRoutes = require('./routes/admin/support');       // FIXED
 const adminSettingsRoutes = require('./routes/admin/settings');
 const adminSecurityRoutes = require('./routes/admin/security');
 const adminSimulationRoutes = require('./routes/admin/simulation'); // FIXED
@@ -111,6 +123,7 @@ app.use('/api/loans', checkFrozen, loanRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/public', publicSupportRoutes); // no auth — landing page contact widget
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/funding', checkFrozen, fundingRoutes);
 
 // Admin Routes
 app.use('/api/admin/users', adminUserRoutes);

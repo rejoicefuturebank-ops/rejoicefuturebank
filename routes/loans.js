@@ -20,89 +20,14 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Apply for loan
+// Apply for loan — DISABLED pending a real lending partner/underwriting.
+// This used to auto-approve any loan under 10x the requester's balance
+// with no real credit check, funding source, or license behind it.
 router.post('/apply', async (req, res) => {
-    try {
-        const { loan_type, principal_amount, term_months } = req.body;
-
-        // Simple eligibility check (simulated)
-        const { data: accounts } = await req.supabase
-            .from('accounts')
-            .select('account_balances(available_balance)')
-            .eq('user_id', req.user.id);
-
-        const totalBalance = accounts.reduce((sum, a) => sum + parseFloat(a.account_balances?.available_balance || 0), 0);
-
-        if (principal_amount > totalBalance * 10) {
-            return res.status(400).json({ error: 'Loan amount too high relative to account balance' });
-        }
-
-        // Calculate interest
-        const interestRates = {
-            personal: 8.5,
-            auto: 5.5,
-            business: 7.0,
-            credit_line: 12.0
-        };
-
-        const rate = interestRates[loan_type] || 8.5;
-        const monthlyRate = rate / 100 / 12;
-        const monthlyPayment = principal_amount * (monthlyRate * Math.pow(1 + monthlyRate, term_months)) / (Math.pow(1 + monthlyRate, term_months) - 1);
-
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + term_months);
-
-        const { data: loan, error } = await req.supabase
-            .from('loans')
-            .insert({
-                id: uuidv4(),
-                user_id: req.user.id,
-                loan_type,
-                principal_amount,
-                outstanding_balance: principal_amount,
-                interest_rate: rate,
-                term_months,
-                monthly_payment: parseFloat(monthlyPayment.toFixed(2)),
-                start_date: startDate.toISOString().split('T')[0],
-                end_date: endDate.toISOString().split('T')[0],
-                status: 'active'
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        // Generate payment schedule
-        let remainingBalance = principal_amount;
-        for (let i = 1; i <= term_months; i++) {
-            const interestPayment = remainingBalance * monthlyRate;
-            const principalPayment = monthlyPayment - interestPayment;
-            remainingBalance -= principalPayment;
-
-            const paymentDate = new Date(startDate);
-            paymentDate.setMonth(paymentDate.getMonth() + i);
-
-            await req.supabase
-                .from('loan_payments')
-                .insert({
-                    id: uuidv4(),
-                    loan_id: loan.id,
-                    payment_number: i,
-                    principal_paid: parseFloat(principalPayment.toFixed(2)),
-                    interest_paid: parseFloat(interestPayment.toFixed(2)),
-                    total_paid: parseFloat(monthlyPayment.toFixed(2)),
-                    balance_after: parseFloat(Math.max(0, remainingBalance).toFixed(2)),
-                    payment_date: paymentDate.toISOString().split('T')[0],
-                    status: 'pending'
-                });
-        }
-
-        res.status(201).json({ loan, message: 'Loan approved and created' });
-    } catch (error) {
-        console.error('Loan application error:', error);
-        res.status(500).json({ error: 'Loan application failed' });
-    }
+    res.status(503).json({
+        error: 'Loan applications are not currently available. We are working on real underwriting and funding — check back soon.',
+        code: 'LOANS_NOT_AVAILABLE'
+    });
 });
 
 // Make payment

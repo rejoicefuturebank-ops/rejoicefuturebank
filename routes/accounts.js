@@ -249,53 +249,14 @@ router.get('/:id/transactions', async (req, res) => {
 });
 
 // ============================================
-// DEPOSIT (SIMULATED)
+// DEPOSIT — replaced by real funding via Stripe/Flutterwave.
+// This endpoint used to credit the account with no money actually
+// moving ("simulated deposit"). See POST /api/funding/initiate.
 // ============================================
 router.post('/:id/deposit', checkFrozen, async (req, res) => {
-    try {
-        const { amount, currency, description } = req.body;
-
-        if (!amount || amount <= 0) {
-            return res.status(400).json({ error: 'Invalid amount' });
-        }
-
-        const { data: account } = await req.supabase
-            .from('accounts')
-            .select('*, account_balances(*)')
-            .eq('id', req.params.id)
-            .eq('user_id', req.user.id)
-            .single();
-
-        if (!account) {
-            return res.status(404).json({ error: 'Account not found' });
-        }
-
-        const ledger = new LedgerService(req.supabase);
-        const transaction = await ledger.createTransaction({
-            type: 'deposit',
-            creditAccountId: account.id,
-            amount,
-            currency: currency || account.currency,
-            description: description || 'Simulated deposit',
-            initiatedBy: req.user.id,
-            metadata: { type: 'simulated_deposit' }
-        });
-
-        await ledger.completeTransaction(transaction.id);
-
-        const notificationService = new NotificationService(req.supabase);
-        await notificationService.create(
-            req.user.id,
-            'deposit',
-            'Deposit Received',
-            `A deposit of ${currency || account.currency} ${amount.toLocaleString()} has been credited to your account.`
-        );
-
-        res.json({ transaction, message: 'Deposit completed successfully' });
-    } catch (error) {
-        console.error('Deposit error:', error);
-        res.status(500).json({ error: 'Deposit failed' });
-    }
+    res.status(410).json({
+        error: 'This endpoint has been replaced. Use POST /api/funding/initiate with provider "stripe" or "flutterwave" to add real money to your account.'
+    });
 });
 
 module.exports = router;
