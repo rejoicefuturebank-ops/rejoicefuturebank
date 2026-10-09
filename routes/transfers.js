@@ -6,7 +6,7 @@ const LedgerService = require('../services/ledger');
 const OTPService = require('../services/otp');
 const FraudDetectionService = require('../services/fraud');
 const NotificationService = require('../services/notifications');
-const flutterwave = require('../services/flutterwaveservice');
+const flutterwave = require('../services/flutterwaveService');
 const { sendEmail } = require('../services/email');
 const { internalTransferSchema, externalTransferSchema, withdrawalSchema } = require('../utils/validators');
 
