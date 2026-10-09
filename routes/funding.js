@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const LedgerService = require('../services/ledger');
-const stripeService = require('../services/stripeservice');
-const flutterwaveService = require('../services/flutterwaveservice');
+const stripeService = require('../services/stripeService');
+const flutterwaveService = require('../services/flutterwaveService');
 const { fundingInitiateSchema } = require('../utils/validators');
 
 router.use(authenticate);
