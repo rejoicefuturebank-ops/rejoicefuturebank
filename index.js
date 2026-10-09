@@ -85,7 +85,7 @@ const authLimiter = rateLimit({
 app.use(generalLimiter);
 
 // Import Customer Routes
-const authRoutes = require('../routes/auth');
+const authRoutes = require('../routes/routes-auth');
 const accountRoutes = require('./routes/accounts');
 const transferRoutes = require('./routes/transfers');
 const cardRoutes = require('./routes/cards');
